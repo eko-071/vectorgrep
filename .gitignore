@@ -2,5 +2,5 @@ data/
 .env
 python-service/.venv
 python-service/__pycache__
-go-api/server
-
+go-api/ingest-batch
+go-api/vgrep
