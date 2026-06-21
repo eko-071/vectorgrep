@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -50,4 +51,72 @@ func (c *Client) Embed(text string) ([]float32, error) {
 	}
 
 	return result.Embedding, nil
+}
+
+type ingestRequest struct {
+	Command string `json:"command"`
+}
+
+type IngestResult struct {
+	Command       string `json:"command"`
+	ChunksIndexed int    `json:"chunks_indexed"`
+}
+
+func (c *Client) Ingest(command string) (*IngestResult, error) {
+	body, err := json.Marshal(ingestRequest{Command: command})
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	resp, err := c.httpClient.Post(c.baseURL+"/ingest", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("call ingestion service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ingestion service returned status %d", resp.StatusCode)
+	}
+
+	var result IngestResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return &result, nil
+}
+
+type SearchResult struct {
+	ID       string         `json:"id"`
+	Text     string         `json:"text"`
+	Metadata map[string]any `json:"metadata"`
+	Score    float64        `json:"score"`
+}
+
+type searchResponse struct {
+	Query   string         `json:"query"`
+	Results []SearchResult `json:"results"`
+}
+
+func (c *Client) Search(query string, topK int) (*searchResponse, error) {
+	params := url.Values{}
+	params.Set("q", query)
+	params.Set("top_k", fmt.Sprintf("%d", topK))
+
+	resp, err := c.httpClient.Get(c.baseURL + "/search?" + params.Encode())
+	if err != nil {
+		return nil, fmt.Errorf("call search service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("search service returned status %d", resp.StatusCode)
+	}
+
+	var result searchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return &result, nil
 }
