@@ -77,6 +77,7 @@ type ingestRequest struct {
 type IngestResult struct {
 	Command       string `json:"command"`
 	ChunksIndexed int    `json:"chunks_indexed"`
+	Skipped       bool   `json:"skipped"`
 }
 
 func (c *Client) Ingest(command string) (*IngestResult, error) {

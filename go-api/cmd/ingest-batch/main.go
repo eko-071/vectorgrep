@@ -29,11 +29,15 @@ func main() {
 	for _, cmd := range commands {
 		result, err := client.Ingest(cmd)
 		if err != nil {
-			fmt.Printf("FAIL %s — %v\n", cmd, err)
+			fmt.Printf("FAIL %s - %v\n", cmd, err)
 			failed++
 			continue
 		}
-		fmt.Printf("PASS %s — %d chunks\n", cmd, result.ChunksIndexed)
+		if result.Skipped {
+			fmt.Printf("SKIP %s - already indexed (%d chunks)\n", cmd, result.ChunksIndexed)
+		} else {
+			fmt.Printf("PASS %s - %d chunks\n", cmd, result.ChunksIndexed)
+		}
 		succeeded++
 	}
 

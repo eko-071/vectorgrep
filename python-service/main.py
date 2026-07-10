@@ -52,6 +52,10 @@ def embed(req: EmbedRequest):
 
 @app.post("/ingest")
 def ingest(req: IngestRequest):
+    if req.command in store.command_ids:
+        n = len(store.command_ids[req.command])
+        return {"command": req.command, "chunks_indexed": n, "skipped": True}
+
     try:
         chunks = parse_manpage(req.command)
     except ValueError as e:
@@ -66,7 +70,7 @@ def ingest(req: IngestRequest):
     store.replace_command(req.command, chunks, embeddings)
     logger.info("ingested '%s': %d chunks", req.command, len(chunks))
 
-    return {"command": req.command, "chunks_indexed": len(chunks)}
+    return {"command": req.command, "chunks_indexed": len(chunks), "skipped": False}
 
 @app.get("/search")
 def search(q: str, top_k: int = 5):
