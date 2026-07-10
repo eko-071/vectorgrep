@@ -21,6 +21,15 @@ func NewClient(baseURL string) *Client {
 	}
 }
 
+type StatusError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *StatusError) Error() string {
+	return e.Message
+}
+
 type embedRequest struct {
 	Text string `json:"text"`
 }
@@ -70,12 +79,20 @@ func (c *Client) Ingest(command string) (*IngestResult, error) {
 
 	resp, err := c.httpClient.Post(c.baseURL+"/ingest", "application/json", bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("call ingestion service: %w", err)
+		return nil, &StatusError{StatusCode: http.StatusServiceUnavailable, Message: "embedding service unreachable"}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("ingestion service returned status %d", resp.StatusCode)
+		var errBody struct {
+			Detail string `json:"detail"`
+		}
+		json.NewDecoder(resp.Body).Decode(&errBody)
+		msg := errBody.Detail
+		if msg == "" {
+			msg = fmt.Sprintf("ingestion service returned status %d", resp.StatusCode)
+		}
+		return nil, &StatusError{StatusCode: resp.StatusCode, Message: msg}
 	}
 
 	var result IngestResult
@@ -105,12 +122,20 @@ func (c *Client) Search(query string, topK int) (*searchResponse, error) {
 
 	resp, err := c.httpClient.Get(c.baseURL + "/search?" + params.Encode())
 	if err != nil {
-		return nil, fmt.Errorf("call search service: %w", err)
+		return nil, &StatusError{StatusCode: http.StatusServiceUnavailable, Message: "search service unreachable"}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("search service returned status %d", resp.StatusCode)
+		var errBody struct {
+			Detail string `json:"detail"`
+		}
+		json.NewDecoder(resp.Body).Decode(&errBody)
+		msg := errBody.Detail
+		if msg == "" {
+			msg = fmt.Sprintf("search service returned status %d", resp.StatusCode)
+		}
+		return nil, &StatusError{StatusCode: resp.StatusCode, Message: msg}
 	}
 
 	var result searchResponse

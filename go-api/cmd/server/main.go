@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -31,6 +32,12 @@ func main() {
 
 		result, err := embedClient.Ingest(req.Command)
 		if err != nil {
+			var statusErr *embedder.StatusError
+			if errors.As(err, &statusErr) {
+				slog.Error("ingestion failed", "error", statusErr.Message, "status", statusErr.StatusCode, "command", req.Command)
+				c.JSON(statusErr.StatusCode, gin.H{"error": statusErr.Message})
+				return
+			}
 			slog.Error("ingestion failed", "error", err, "command", req.Command)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ingestion failed"})
 			return
@@ -48,6 +55,12 @@ func main() {
 
 		result, err := embedClient.Search(query, 5)
 		if err != nil {
+			var statusErr *embedder.StatusError
+			if errors.As(err, &statusErr) {
+				slog.Error("search failed", "error", statusErr.Message, "status", statusErr.StatusCode, "query", query)
+				c.JSON(statusErr.StatusCode, gin.H{"error": statusErr.Message})
+				return
+			}
 			slog.Error("search failed", "error", err, "query", query)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "search failed"})
 			return
