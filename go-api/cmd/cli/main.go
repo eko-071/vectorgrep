@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/eko-071/vectorgrep/internal/embedder"
 	"github.com/eko-071/vectorgrep/internal/env"
@@ -28,7 +29,7 @@ func main() {
 	query := strings.Join(flag.Args(), " ")
 	apiURL := env.GetEnv("GO_API_URL", "http://localhost:8080")
 
-	client := embedder.NewClient(apiURL)
+	client := embedder.NewClient(apiURL, 15*time.Second)
 	result, err := client.Search(query, *n)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "search failed: %v\n", err)

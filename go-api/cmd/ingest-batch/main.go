@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/eko-071/vectorgrep/internal/embedder"
 	"github.com/eko-071/vectorgrep/internal/env"
@@ -36,7 +37,7 @@ func main() {
 	}
 
 	apiURL := env.GetEnv("GO_API_URL", "http://localhost:8080")
-	client := embedder.NewClient(apiURL)
+	client := embedder.NewClient(apiURL, 120*time.Second)
 
 	var succeeded, failed int
 	for _, cmd := range commands {

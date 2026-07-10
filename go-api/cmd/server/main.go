@@ -18,7 +18,7 @@ func main() {
 	port := env.GetEnv("GO_PORT", "8080")
 	embedServiceURL := env.GetEnv("EMBEDDING_SERVICE_URL", "http://localhost:8001")
 
-	embedClient := embedder.NewClient(embedServiceURL)
+	embedClient := embedder.NewClient(embedServiceURL, 30*time.Second)
 	r := gin.Default()
 
 	r.GET("/health", func(c *gin.Context) {
