@@ -31,6 +31,7 @@ mkdir
 rmdir
 chmod
 chown
+grep
 
 # memory
 mmap
