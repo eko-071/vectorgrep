@@ -2,9 +2,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/eko-071/vectorgrep/internal/embedder"
 	"github.com/gin-gonic/gin"
@@ -69,6 +71,11 @@ func main() {
 		c.JSON(http.StatusOK, result)
 	})
 
+	if err := waitForPython(embedServiceURL, 15); err != nil {
+		slog.Error("could not reach python service", "error", err)
+		os.Exit(1)
+	}
+
 	slog.Info("starting server", "port", port)
 	r.Run(":" + port)
 }
@@ -78,4 +85,19 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func waitForPython(url string, maxAttempts int) error {
+	client := &http.Client{Timeout: 2 * time.Second}
+	for i := range maxAttempts {
+		resp, err := client.Get(url + "/health")
+		if err == nil && resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			slog.Info("python service ready")
+			return nil
+		}
+		slog.Info("waiting for python service...", "attempt", i+1, "max", maxAttempts)
+		time.Sleep(2 * time.Second)
+	}
+	return fmt.Errorf("python service not ready after %d attempts", maxAttempts)
 }
