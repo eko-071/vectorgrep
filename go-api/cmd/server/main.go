@@ -6,15 +6,17 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/eko-071/vectorgrep/internal/embedder"
+	"github.com/eko-071/vectorgrep/internal/env"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	port := getEnv("GO_PORT", "8080")
-	embedServiceURL := getEnv("EMBEDDING_SERVICE_URL", "http://localhost:8001")
+	port := env.GetEnv("GO_PORT", "8080")
+	embedServiceURL := env.GetEnv("EMBEDDING_SERVICE_URL", "http://localhost:8001")
 
 	embedClient := embedder.NewClient(embedServiceURL)
 	r := gin.Default()
@@ -55,7 +57,8 @@ func main() {
 			return
 		}
 
-		result, err := embedClient.Search(query, 5)
+		topK, _ := strconv.Atoi(c.DefaultQuery("top_k", "5"))
+		result, err := embedClient.Search(query, topK)
 		if err != nil {
 			var statusErr *embedder.StatusError
 			if errors.As(err, &statusErr) {
@@ -78,13 +81,6 @@ func main() {
 
 	slog.Info("starting server", "port", port)
 	r.Run(":" + port)
-}
-
-func getEnv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
 }
 
 func waitForPython(url string, maxAttempts int) error {

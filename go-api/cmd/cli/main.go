@@ -1,26 +1,35 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/eko-071/vectorgrep/internal/embedder"
+	"github.com/eko-071/vectorgrep/internal/env"
 )
 
 const maxTextLength = 200
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("usage: vgrep <query>")
+	n := flag.Int("n", 5, "number of results")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "usage: vgrep [-n N] <query>\n")
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+
+	if flag.NArg() == 0 {
+		flag.Usage()
 		os.Exit(1)
 	}
 
-	query := strings.Join(os.Args[1:], " ")
-	apiURL := getEnv("GO_API_URL", "http://localhost:8080")
+	query := strings.Join(flag.Args(), " ")
+	apiURL := env.GetEnv("GO_API_URL", "http://localhost:8080")
 
 	client := embedder.NewClient(apiURL)
-	result, err := client.Search(query, 5)
+	result, err := client.Search(query, *n)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "search failed: %v\n", err)
 		os.Exit(1)
@@ -49,9 +58,4 @@ func truncate(text string, max int) string {
 	return cleaned[:max] + "..."
 }
 
-func getEnv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
+

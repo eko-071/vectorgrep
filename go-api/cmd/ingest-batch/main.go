@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/eko-071/vectorgrep/internal/embedder"
+	"github.com/eko-071/vectorgrep/internal/env"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	apiURL := getEnv("GO_API_URL", "http://localhost:8080")
+	apiURL := env.GetEnv("GO_API_URL", "http://localhost:8080")
 	client := embedder.NewClient(apiURL)
 
 	var succeeded, failed int
@@ -58,9 +59,4 @@ func readCommands(path string) ([]string, error) {
 	return commands, scanner.Err()
 }
 
-func getEnv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
+

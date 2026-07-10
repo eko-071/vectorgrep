@@ -46,12 +46,20 @@ func (c *Client) Embed(text string) ([]float32, error) {
 
 	resp, err := c.httpClient.Post(c.baseURL+"/embed", "application/json", bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("call embedding service: %w", err)
+		return nil, &StatusError{StatusCode: http.StatusServiceUnavailable, Message: "embedding service unreachable"}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("embedding service returned status %d", resp.StatusCode)
+		var errBody struct {
+			Detail string `json:"detail"`
+		}
+		json.NewDecoder(resp.Body).Decode(&errBody)
+		msg := errBody.Detail
+		if msg == "" {
+			msg = fmt.Sprintf("embedding service returned status %d", resp.StatusCode)
+		}
+		return nil, &StatusError{StatusCode: resp.StatusCode, Message: msg}
 	}
 
 	var result embedResponse
