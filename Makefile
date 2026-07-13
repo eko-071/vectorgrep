@@ -1,7 +1,6 @@
 include .env
 export
 
-PORT ?= 8080
 PYTHON_PORT ?= 8001
 
 .PHONY: run-python run-go build-cli build-ingest ingest

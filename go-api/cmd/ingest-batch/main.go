@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,7 +38,8 @@ func main() {
 	}
 
 	apiURL := env.GetEnv("GO_API_URL", "http://localhost:8080")
-	client := embedder.NewClient(apiURL, 120*time.Second)
+	timeoutSec, _ := strconv.Atoi(env.GetEnv("HTTP_TIMEOUT_SEC", "120"))
+	client := embedder.NewClient(apiURL, time.Duration(timeoutSec)*time.Second)
 
 	var succeeded, failed int
 	for _, cmd := range commands {

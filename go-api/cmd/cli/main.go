@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,8 +16,9 @@ const maxTextLength = 200
 
 func main() {
 	n := flag.Int("n", 5, "number of results")
+	s := flag.Float64("s", 0, "score threshold (default: SCORE_THRESHOLD env var)")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: vgrep [-n N] <query>\n")
+		fmt.Fprintf(os.Stderr, "usage: vgrep [-n N] [-s S] <query>\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -29,8 +31,9 @@ func main() {
 	query := strings.Join(flag.Args(), " ")
 	apiURL := env.GetEnv("GO_API_URL", "http://localhost:8080")
 
-	client := embedder.NewClient(apiURL, 15*time.Second)
-	result, err := client.Search(query, *n)
+	timeoutSec, _ := strconv.Atoi(env.GetEnv("HTTP_TIMEOUT_SEC", "15"))
+	client := embedder.NewClient(apiURL, time.Duration(timeoutSec)*time.Second)
+	result, err := client.Search(query, *n, *s)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "search failed: %v\n", err)
 		os.Exit(1)

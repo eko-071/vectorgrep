@@ -38,6 +38,18 @@ type embedResponse struct {
 	Embedding []float32 `json:"embedding"`
 }
 
+func (c *Client) decodeErrorResponse(resp *http.Response, service string) error {
+	var errBody struct {
+		Detail string `json:"detail"`
+	}
+	json.NewDecoder(resp.Body).Decode(&errBody)
+	msg := errBody.Detail
+	if msg == "" {
+		msg = fmt.Sprintf("%s returned status %d", service, resp.StatusCode)
+	}
+	return &StatusError{StatusCode: resp.StatusCode, Message: msg}
+}
+
 func (c *Client) Embed(text string) ([]float32, error) {
 	body, err := json.Marshal(embedRequest{Text: text})
 	if err != nil {
@@ -51,15 +63,7 @@ func (c *Client) Embed(text string) ([]float32, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errBody struct {
-			Detail string `json:"detail"`
-		}
-		json.NewDecoder(resp.Body).Decode(&errBody)
-		msg := errBody.Detail
-		if msg == "" {
-			msg = fmt.Sprintf("embedding service returned status %d", resp.StatusCode)
-		}
-		return nil, &StatusError{StatusCode: resp.StatusCode, Message: msg}
+		return nil, c.decodeErrorResponse(resp, "embedding service")
 	}
 
 	var result embedResponse
@@ -92,15 +96,7 @@ func (c *Client) Ingest(command string) (*IngestResult, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errBody struct {
-			Detail string `json:"detail"`
-		}
-		json.NewDecoder(resp.Body).Decode(&errBody)
-		msg := errBody.Detail
-		if msg == "" {
-			msg = fmt.Sprintf("ingestion service returned status %d", resp.StatusCode)
-		}
-		return nil, &StatusError{StatusCode: resp.StatusCode, Message: msg}
+		return nil, c.decodeErrorResponse(resp, "ingestion service")
 	}
 
 	var result IngestResult
@@ -123,10 +119,13 @@ type searchResponse struct {
 	Results []SearchResult `json:"results"`
 }
 
-func (c *Client) Search(query string, topK int) (*searchResponse, error) {
+func (c *Client) Search(query string, topK int, scoreThreshold float64) (*searchResponse, error) {
 	params := url.Values{}
 	params.Set("q", query)
 	params.Set("top_k", fmt.Sprintf("%d", topK))
+	if scoreThreshold > 0 {
+		params.Set("score_threshold", fmt.Sprintf("%.2f", scoreThreshold))
+	}
 
 	resp, err := c.httpClient.Get(c.baseURL + "/search?" + params.Encode())
 	if err != nil {
@@ -135,15 +134,7 @@ func (c *Client) Search(query string, topK int) (*searchResponse, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var errBody struct {
-			Detail string `json:"detail"`
-		}
-		json.NewDecoder(resp.Body).Decode(&errBody)
-		msg := errBody.Detail
-		if msg == "" {
-			msg = fmt.Sprintf("search service returned status %d", resp.StatusCode)
-		}
-		return nil, &StatusError{StatusCode: resp.StatusCode, Message: msg}
+		return nil, c.decodeErrorResponse(resp, "search service")
 	}
 
 	var result searchResponse

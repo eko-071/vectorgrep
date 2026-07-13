@@ -41,8 +41,7 @@ class IngestRequest(BaseModel):
 def health():
     return {
         "status": "ok",
-        "model_loaded": embedder is not None,
-        "vectors_indexed": store.index.ntotal if store else 0
+        "vectors_indexed": store.index.ntotal
     }
 
 @app.post("/embed")
@@ -69,10 +68,11 @@ def ingest(req: IngestRequest):
     return {"command": req.command, "chunks_indexed": len(chunks)}
 
 @app.get("/search")
-def search(q: str, top_k: int = 5):
+def search(q: str, top_k: int = 5, score_threshold: float = None):
     query = f"Linux command: {q}"
     query_vector = embedder.embed(query)
     results = store.search(query_vector, top_k=top_k)
-    filtered = [r for r in results if r["score"] >= SCORE_THRESHOLD]
+    threshold = score_threshold if score_threshold is not None else SCORE_THRESHOLD
+    filtered = [r for r in results if r["score"] >= threshold]
 
     return {"query": q, "results": filtered}

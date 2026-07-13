@@ -18,7 +18,8 @@ func main() {
 	port := env.GetEnv("GO_PORT", "8080")
 	embedServiceURL := env.GetEnv("EMBEDDING_SERVICE_URL", "http://localhost:8001")
 
-	embedClient := embedder.NewClient(embedServiceURL, 30*time.Second)
+	timeoutSec, _ := strconv.Atoi(env.GetEnv("HTTP_TIMEOUT_SEC", "30"))
+	embedClient := embedder.NewClient(embedServiceURL, time.Duration(timeoutSec)*time.Second)
 	r := gin.Default()
 
 	r.GET("/health", func(c *gin.Context) {
@@ -36,14 +37,7 @@ func main() {
 
 		result, err := embedClient.Ingest(req.Command)
 		if err != nil {
-			var statusErr *embedder.StatusError
-			if errors.As(err, &statusErr) {
-				slog.Error("ingestion failed", "error", statusErr.Message, "status", statusErr.StatusCode, "command", req.Command)
-				c.JSON(statusErr.StatusCode, gin.H{"error": statusErr.Message})
-				return
-			}
-			slog.Error("ingestion failed", "error", err, "command", req.Command)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ingestion failed"})
+			sendError(c, err, "ingestion failed", "command", req.Command)
 			return
 		}
 
@@ -58,16 +52,10 @@ func main() {
 		}
 
 		topK, _ := strconv.Atoi(c.DefaultQuery("top_k", "5"))
-		result, err := embedClient.Search(query, topK)
+		scoreThreshold, _ := strconv.ParseFloat(c.DefaultQuery("score_threshold", "0"), 64)
+		result, err := embedClient.Search(query, topK, scoreThreshold)
 		if err != nil {
-			var statusErr *embedder.StatusError
-			if errors.As(err, &statusErr) {
-				slog.Error("search failed", "error", statusErr.Message, "status", statusErr.StatusCode, "query", query)
-				c.JSON(statusErr.StatusCode, gin.H{"error": statusErr.Message})
-				return
-			}
-			slog.Error("search failed", "error", err, "query", query)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "search failed"})
+			sendError(c, err, "search failed", "query", query)
 			return
 		}
 
@@ -81,6 +69,19 @@ func main() {
 
 	slog.Info("starting server", "port", port)
 	r.Run(":" + port)
+}
+
+func sendError(c *gin.Context, err error, msg string, extra ...any) {
+	var statusErr *embedder.StatusError
+	if errors.As(err, &statusErr) {
+		args := append([]any{"error", statusErr.Message, "status", statusErr.StatusCode}, extra...)
+		slog.Error(msg, args...)
+		c.JSON(statusErr.StatusCode, gin.H{"error": statusErr.Message})
+		return
+	}
+	args := append([]any{"error", err}, extra...)
+	slog.Error(msg, args...)
+	c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 }
 
 func waitForPython(url string, maxAttempts int) error {
