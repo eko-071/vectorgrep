@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/eko-071/vectorgrep/internal/embedder"
@@ -67,8 +70,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	slog.Info("starting server", "port", port)
-	r.Run(":" + port)
+	srv := &http.Server{Addr: ":" + port, Handler: r}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server error", "error", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	slog.Info("shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("forced shutdown", "error", err)
+	}
 }
 
 func sendError(c *gin.Context, err error, msg string, extra ...any) {
