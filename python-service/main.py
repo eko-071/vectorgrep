@@ -70,7 +70,8 @@ def ingest(req: IngestRequest):
 
 @app.get("/search")
 def search(q: str, top_k: int = 5):
-    query_vector = embedder.embed(q)
+    query = f"Linux command: {q}"
+    query_vector = embedder.embed(query)
     results = store.search(query_vector, top_k=top_k)
     filtered = [r for r in results if r["score"] >= SCORE_THRESHOLD]
 

@@ -73,6 +73,8 @@ def chunk_section(text: str, max_words: int = MAX_CHUNK_WORDS) -> list[str]:
 
     return chunks
 
+SKIP_SECTIONS = {"SEE ALSO", "COLOPHON", "HISTORY", "AUTHORS", "REPORTING BUGS", "COPYRIGHT"}
+
 def parse_manpage(command: str) -> list[dict]:
     raw_text = get_manpage_text(command)
     lines = raw_text.splitlines()
@@ -82,6 +84,8 @@ def parse_manpage(command: str) -> list[dict]:
 
     chunks = []
     for section_name, raw_body in raw_sections.items():
+        if section_name in SKIP_SECTIONS:
+            continue
         cleaned = clean_section_text(raw_body)
         if not cleaned:
             continue
