@@ -1,0 +1,16 @@
+# Potentially important commands that failed to ingest
+# Investigate: man page may be in a different section or not exist
+cargo-report-future-in...
+cmake-commands
+cmake-generator-expres...
+cmake-modules
+cmake-policies
+drm
+drm-kms
+drm-memory
+g++
+gcc
+git-credential-cache--...
+io_uring_registered_bu...
+mpv
+zshall

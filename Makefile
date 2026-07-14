@@ -3,7 +3,7 @@ export
 
 PYTHON_PORT ?= 8001
 
-.PHONY: run-python run-go build-cli build-ingest ingest
+.PHONY: run-python run-go build-cli build-ingest ingest docker-up docker-down docker-logs
 
 run-python:
 	cd python-service && uv run uvicorn main:app --port $(PYTHON_PORT)
@@ -19,3 +19,12 @@ build-ingest:
 
 ingest: build-ingest
 	cd go-api && ./ingest-batch commands.txt
+
+docker-up:
+	docker compose up --build -d
+
+docker-down:
+	docker compose down
+
+docker-logs:
+	docker compose logs -f

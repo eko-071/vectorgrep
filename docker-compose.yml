@@ -1,0 +1,22 @@
+services:
+  python-service:
+    build: ./python-service
+    ports:
+      - "${PYTHON_PORT:-8001}:8001"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - FAISS_INDEX_PATH=/app/data/index.faiss
+      - METADATA_PATH=/app/data/metadata.json
+      - SCORE_THRESHOLD=${SCORE_THRESHOLD:-0.5}
+
+  go-api:
+    build: ./go-api
+    ports:
+      - "${GO_PORT:-8080}:8080"
+    environment:
+      - GO_PORT=8080
+      - EMBEDDING_SERVICE_URL=http://python-service:8001
+      - HTTP_TIMEOUT_SEC=${HTTP_TIMEOUT_SEC:-30}
+    depends_on:
+      - python-service

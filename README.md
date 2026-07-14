@@ -31,9 +31,35 @@ make build-cli
 ./go-api/vgrep -n 3 "find processes by memory"
 ```
 
+## Docker
+
+Build and run both services with a single command. Your existing `data/` is
+bind-mounted in — no re-ingest needed.
+
+```bash
+# Build and start
+make docker-up
+
+# Check they're healthy
+curl localhost:8080/health
+curl localhost:8001/health
+
+# Search via Go API
+curl -s "localhost:8080/search?q=compress+a+directory&top_k=3"
+
+# Use the CLI from host
+GO_API_URL=http://localhost:8080 ./go-api/vgrep "compress a directory"
+
+# View logs
+make docker-logs
+
+# Stop
+make docker-down
+```
+
 ## Indexing
 
-`go-api/commands.txt` contains 6,339 commands across sections 1-8.
+`go-api/commands.txt` contains 5,873 commands across sections 1-8.
 
 ```bash
 make ingest
@@ -73,12 +99,15 @@ Regenerate the command list with `python scripts/generate_commands.py`.
 
 ```
 ├── python-service/
+│   ├── Dockerfile
+│   ├── .dockerignore
 │   ├── main.py
 │   ├── embedder.py
 │   ├── parser.py
 │   ├── vector_store.py
 │   └── pyproject.toml
 ├── go-api/
+│   ├── Dockerfile
 │   ├── cmd/
 │   │   ├── cli/main.go
 │   │   ├── ingest-batch/main.go
@@ -95,6 +124,7 @@ Regenerate the command list with `python scripts/generate_commands.py`.
 ├── data/
 ├── scripts/
 │   └── generate_commands.py
+├── docker-compose.yml
 ├── Makefile
 ├── .env
 └── README.md
